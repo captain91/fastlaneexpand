@@ -54,7 +54,11 @@ dmFile = "./fastlane/metadata"
 
 def trans(path,tagLanguage,tagTxt)
     cntent = `trans :#{tagLanguage} file://fastlane/metadata/default/#{tagTxt}.txt`
-    puts cntent
+    puts cntent.length
+    if cntent.length < 10
+        puts "翻译失败，使用默认值"
+        cntent = File.read("fastlane/metadata/default/#{tagTxt}.txt")
+    end
     tagPath = path + "/#{tagTxt}.txt"
     File.new(tagPath,"w").syswrite(cntent)
     puts "-------写入文件完成---------"
@@ -68,19 +72,21 @@ def copyImage (languagesArr,mainLanguage,dsFile,dmFile)
         df = "#{dmFile + "/" + i}"
         if !(Dir.exists? df)
             Dir.mkdir df
-            #开始翻译到新建文件
-            puts "------正在翻译内容-----"
-            tagLanguage = i[0,2] #翻译对应的语言
-            tagDescription = "description"
-            tagRelease_notes = "release_notes"
-            puts "目标语言代码#{tagLanguage}"
-            trans df,tagLanguage,tagDescription
-            #更新记录不为空就翻译
-            if !File.zero?("fastlane/metadata/default/#{tagRelease_notes}.txt")
-                trans df,tagLanguage,tagRelease_notes
-            end
         end
 
+        #开始翻译到新建文件
+        puts "------正在翻译内容-----"
+        tagLanguage = i[0,2] #翻译对应的语言
+        tagDescription = "description"
+        tagRelease_notes = "release_notes"
+        puts "目标语言代码#{tagLanguage}"
+        trans df,tagLanguage,tagDescription
+        #更新记录不为空就翻译
+        if !File.zero?("fastlane/metadata/default/#{tagRelease_notes}.txt")
+            trans df,tagLanguage,tagRelease_notes
+        end
+
+        #创建屏幕截图文件夹
         mf = "#{dsFile + "/" + i}"
         if !(Dir.exists? mf)
             Dir.mkdir mf
@@ -136,9 +142,8 @@ end
 
 puts "------添加 #{languages.length} 个多语言------"
 copyImage languages,mainLanguage,dsFile,dmFile
-puts "------图片操作完成，执行上传图片操作----"
-# exec "fastlane upload_shots_metadata"
-
+puts "------操作完成，执行上传图片和元数据操作----"
+exec "fastlane upload_shots_metadata"
 
 # def copy(from, to)
 #   File.open(from) do |input|
