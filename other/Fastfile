@@ -1,0 +1,1343 @@
+#!/usr/bin/ruby -w
+
+# 打包文件存储路径 默认存储在根目录下
+PLIST_VERSION_NUMBER = get_version_number(target: ENV['PRO_SCHEME']) # 版本号
+PLIST_BUILD_NUMBER = get_info_plist_value(path: ENV['INFO_PLIST_PATH'], key: 'CFBundleVersion')
+P_12_PASSWORD = "123abc" # 打包时导出的p12密码
+APP_ICON_PATH = "./"+ENV['PRO_SCHEME']+"/Assets.xcassets/AppIcon.appiconset/icon_1024x1024.png"
+LANCSCAPE_LEFT_SYMBOL_INFO = "ll"
+LANCSCAPE_RIGHT_SYMBOL_INFO = "lr"
+$PREPARE_COMPLETED = false
+$LANGUAGE = "English"
+$TEAM_ID = CredentialsManager::AppfileConfig.try_fetch_value(:team_id)
+$PRO_BUNDLE_IDEN = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)
+$ACCOUNT_IDEN = CredentialsManager::AppfileConfig.try_fetch_value(:apple_id)
+
+
+default_platform(:ios)
+
+platform :ios do
+# 执行所有lane操作之前执行
+desc "config before all lanes"
+before_all do
+# clear drivedData files
+# clear_derived_data
+xcode_select "/Applications/Xcode.app"
+FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT = "40"
+
+# choose a Xcode version to run
+# xcversion(version: "~>10.3")
+
+# ENV["SLACK_URL"] = "https://hooks.slack.com/services/..."
+# setup_circle_ci
+end
+
+
+desc "Run all the tests"
+lane :test do
+scan
+end
+
+
+desc "submit a new beta to TestFlight, this will make sure that PP file the newest!"
+lane :Beta do
+# match(type: "appstore") #more information visit https://codesigning.guide
+gym(scheme: ENV['PRO_SCHEME']) #build app
+# pilot
+# sh "your_script.sh" #excute .sh file
+end
+
+
+# desc '打包前的准备工作'
+# lane :prepare do
+#     if !$PREPARE_COMPLETED
+#     puts "\033[32m====================Ready for package====================\033[0m\n"
+#     end
+#     select_method = '-1'
+#     puts "\033[32m请选择自动化方式\033[0m \033[33m\n1:  一键上传提审(自动发布状态)\n2:  一键上传提审(手动发布状态)\n3:  手动生成截图拖入目录一键上传提审(自动发布状态)\n4:  手动生成截图拖入目录一键上传提审(手动发布状态)\n5:  更新迭代覆盖展示图提审(用新图覆盖ITC已有展示图 注意填写Deliverfile内版本更新内容)\n6:  更新迭代\033[41m不\033[0m\033[33m覆盖展示图提审(\033[0m\033[41m不\033[0m\033[33m会覆盖原有展示图 注意填写Deliverfile内版本更新内容)\n7:  自动生成证书\n8:  自动生成描述文件\n9:  生成截图\n10: 生成带文案和外框的截图\n11: 单独为屏幕截图加文案和外框(需要配置Framefile.json+.strings文件)\n12: 预检测\n13: 构建版本\n14: 只上传元数据\n15: 只上传二进制\n16: 只上传屏幕截图\n17: 上传已有文件提审(不创建证书、描述文件、截图、构建版本, 自动发布, 如果没有构建版本会报错)\n18: 不做其他附加操作, 只提审(ITC无已经上传的构建版本或是元数据有误都会报错)\n\033[0m\n\033[32m其他输入会结束打包, 回车表示使用默认(一键自动发布)\033[0m"
+#     select_method = STDIN.gets.chomp
+#     method_i = select_method.to_i
+#     if (method_i<1 || method_i>18) && !select_method.empty?
+#         UI.user_error!("未找到符合操作, 操作取消")
+#     end
+
+#     $PREPARE_COMPLETED = true
+
+#     if select_method != '-1'
+#         case select_method
+#         # 一键上传提审(自动发布状态)
+#         when '1',''
+#             release(
+#                 frame_and_slogan: false,
+#                 is_auto_mode: true,
+#                 is_over_write: true
+#             )
+
+#         # 一键上传提审(手动发布状态)
+#         when '2'
+#             release(
+#                 frame_and_slogan: false,
+#                 is_auto_mode: false,
+#                 is_over_write: true
+#             )
+
+#         # 手动生成截图拖入目录一键上传提审(自动发布状态)
+#         when '3'
+#             step_to_auto_release
+
+#         # 手动生成截图拖入目录一键上传提审(自动发布状态)
+#         when '4'
+#             step_to_manual_release
+
+#         # 更新迭代覆盖展示图提审(用新图覆盖ITC已有展示图)
+#         when '5'
+#             puts "\033[32m请选择发布方式\033[0m \033[33m\n1:  自动发布\n2:  手动发布\n\033[0m\033[32m其他输入会结束操作, 直接回车会自动发布\033[0m"
+#             release_mode = STDIN.gets.chomp
+#             release_mode_i = release_mode.to_i
+#             if (release_mode_i>2 || release_mode_i<1) && !release_mode.empty?
+#                 UI.user_error!("操作取消")
+#             end
+#             if release_mode == '1' || release_mode == ''
+#                 puts "\033[32m选择了自动发布\033[0m"
+#                 update_release(
+#                     is_auto_mode: true,
+#                     is_over_write: true
+#                 )
+#             elsif release_mode == '2'
+#                 puts "\033[32m选择了手动发布\033[0m"
+#                 update_release(
+#                     is_auto_mode: false,
+#                     is_over_write: true
+#                 )
+#             else
+#                 UI.user_error!("操作取消")
+#             end
+
+
+#         # 更新迭代提审(不会用新图覆盖ITC已有展示图)
+#         when '6'
+#             puts "\033[32m请选择发布方式\033[0m \033[33m\n1:  自动发布\n2:  手动发布\n\033[0m\033[32m其他输入会结束操作, 直接回车会自动发布\033[0m"
+#             release_mode = STDIN.gets.chomp
+#             release_mode_i = release_mode.to_i
+#             if (release_mode_i>2 || release_mode_i<1) && !release_mode.empty?
+#                 UI.user_error!("操作取消")
+#             end
+#             if release_mode == '1' || release_mode == ''
+#                 puts "\033[32m选择了自动发布\033[0m"
+#                 update_release(
+#                     is_auto_mode: true,
+#                     is_over_write: false
+#                 )
+#             elsif release_mode == '2'
+#                 puts "\033[32m选择了手动发布\033[0m"
+#                 update_release(
+#                     is_auto_mode: false,
+#                     is_over_write: false
+#                 )
+#             else
+#                 UI.user_error!("操作取消")
+#             end
+
+#         # 自动生成描述文件
+#         when '7'
+#             auto_cert
+
+#         # 自动生成描述文件(跳过安装到Xcode)
+#         when '8'
+#             generate_pp_file
+
+#         # 生成截图
+#         when '9'
+#             generate_snip_files(
+#                 is_frame_it: false
+#             )
+
+#         # 生成带文案和外框的截图
+#         when '10'
+#             generate_snip_files(
+#                 is_frame_it: true
+#             )
+
+#         # 为屏幕截图加文案和外框
+#         when '11'
+#             add_frame_and_slogan
+
+#         # 预检测
+#         when '12'
+#             check_metadata
+
+#         # 构建版本
+#         when '13'
+#             package_application(
+#                 auto_increment: false
+#             )
+
+#         # 上传元数据
+#         when '14'
+#             upload_to_itunes_review(
+#                 upload_type: "metadata"
+#             )
+
+#         # 上传二进制
+#         when '15'
+#             upload_to_itunes_review(
+#                 upload_type: "ipa"
+#             )
+
+#         # 上传截图
+#         when '16'
+#             upload_to_itunes_review(
+#                 upload_type: "snip_files"
+#             )
+
+#         # 上传已有文件提审(自动发布状态)(不创建证书、描述文件、截图、构建版本)
+#         when '17'
+#             puts "\033[32m请选择发布方式\033[0m \033[33m\n1:  自动发布\n2:  手动发布\n\033[0m\033[32m其他输入会结束操作, 直接回车会自动发布\033[0m"
+#             release_mode = STDIN.gets.chomp
+#             release_mode_i = release_mode.to_i
+#             if (release_mode_i>2 || release_mode_i<1) && !release_mode.empty?
+#                 UI.user_error!("操作取消")
+#             end
+
+#             if release_mode == '1' || release_mode == ''
+#                 puts "\033[32m选择了自动发布\033[0m"
+#                 is_auto_mode = true
+#             elsif release_mode == '2'
+#                 puts "\033[32m选择了手动发布\033[0m"
+#                 is_auto_mode = false
+#             else
+#                 UI.user_error!("操作取消")
+#             end
+
+#             upload_to_itunes_review(
+#                 upload_type: "all",
+#                 is_auto_mode: is_auto_mode,
+#                 is_over_write: true
+#             )
+
+#         # 不做其他操作自提审
+#         when '18'
+#             puts "\033[32m请选择发布方式\033[0m \033[33m\n1:  自动发布\n2:  手动发布\n\033[0m\033[32m其他输入会结束操作, 直接回车会自动发布\033[0m"
+#             release_mode = STDIN.gets.chomp
+#             release_mode_i = release_mode.to_i
+#             if (release_mode_i>2 || release_mode_i<1) && !release_mode.empty?
+#                 UI.user_error!("操作取消")
+#             end
+
+#             if release_mode == '1' || release_mode == ''
+#                 puts "\033[32m选择了自动发布\033[0m"
+#                 is_auto_mode = true
+#             elsif release_mode == '2'
+#                 puts "\033[32m选择了手动发布\033[0m"
+#                 is_auto_mode = false
+#             else
+#                 UI.user_error!("操作取消")
+#             end
+
+#             notification(
+#                 app_icon: "#{APP_ICON_PATH}",
+#                 title: "提审操作",
+#                 subtitle: "#{Time.now}",
+#                 message: ENV['PRO_SCHEME']+"开始提审操作"
+#             )
+
+#             upload_to_app_store(
+#                 platform: "ios",
+#                 force: true, #跳过HTMI报告验证上传
+#                 skip_metadata: true,
+#                 skip_binary_upload: true,
+#                 skip_screenshots: true,
+#                 precheck_include_in_app_purchases: false, # 预检测
+#                 run_precheck_before_submit: false,
+#                 submit_for_review: true,
+#                 automatic_release: is_auto_mode
+#             )
+
+#             notification(
+#                 app_icon: "#{APP_ICON_PATH}",
+#                 title: "提审操作",
+#                 subtitle: "#{Time.now}",
+#                 message: ENV['PRO_SCHEME']+"提审完成"
+#             )
+#         else 
+#             UI.user_error!("未找到选项")
+#         end
+#     end
+# end
+
+
+# 1 
+desc "一键上传提审(自动发布状态)"
+lane :one_click_to_auto_release do
+    release(
+        frame_and_slogan: false,
+        is_auto_mode: true,
+        is_over_write: true
+    )
+end
+
+
+# 2
+desc "一键上传提审(手动发布状态)"
+lane :one_click_to_manual_release do
+    release(
+        frame_and_slogan: false,
+        is_auto_mode: false,
+        is_over_write: true
+    )
+end
+
+
+# 3
+desc "创建完应用一键自动发布上传"
+lane :step_to_auto_release do
+    auto_cert
+
+    generate_pp_file
+
+    package_application(
+        auto_increment: true
+    )
+
+    upload_to_itunes_review(
+        upload_type: "all",
+        is_auto_mode: true,
+        is_over_write: true
+    )
+end
+
+
+# 4
+desc "创建完应用一键手动发布上传"
+lane :step_to_manual_release do
+    auto_cert
+
+    generate_pp_file
+
+    package_application(
+        auto_increment: true
+    )
+
+    upload_to_itunes_review(
+        upload_type: "all",
+        is_auto_mode: false,
+        is_over_write: true
+    )
+end
+
+
+# 5
+desc "更新迭代覆盖展示图提审"
+lane :update_overwrite_screenshots_to_review do
+    puts "\033[32m请选择发布方式\033[0m \033[33m\n1:  自动发布\n2:  手动发布\n\033[0m\033[32m其他输入会结束操作, 直接回车会自动发布\033[0m"
+    release_mode = STDIN.gets.chomp
+    release_mode_i = release_mode.to_i
+    if (release_mode_i>2 || release_mode_i<1) && !release_mode.empty?
+        UI.user_error!("操作取消")
+    end
+    if release_mode == '1' || release_mode == ''
+        puts "\033[32m选择了自动发布\033[0m"
+        update_release(
+            is_auto_mode: true,
+            is_over_write: true
+        )
+    elsif release_mode == '2'
+        puts "\033[32m选择了手动发布\033[0m"
+        update_release(
+            is_auto_mode: false,
+            is_over_write: true
+        )
+    else
+        UI.user_error!("操作取消")
+    end
+end
+
+
+# 6
+desc "更新迭代_不_覆盖展示图提审"
+lane :update_skip_overwrite_screenshots_to_review do
+    puts "\033[32m请选择发布方式\033[0m \033[33m\n1:  自动发布\n2:  手动发布\n\033[0m\033[32m其他输入会结束操作, 直接回车会自动发布\033[0m"
+    release_mode = STDIN.gets.chomp
+    release_mode_i = release_mode.to_i
+    if (release_mode_i>2 || release_mode_i<1) && !release_mode.empty?
+        UI.user_error!("操作取消")
+    end
+    if release_mode == '1' || release_mode == ''
+        puts "\033[32m选择了自动发布\033[0m"
+        update_release(
+            is_auto_mode: true,
+            is_over_write: false
+        )
+    elsif release_mode == '2'
+        puts "\033[32m选择了手动发布\033[0m"
+        update_release(
+            is_auto_mode: false,
+            is_over_write: false
+        )
+    else
+        UI.user_error!("操作取消")
+    end
+end
+
+
+# 7
+desc "generate certificates"
+lane :auto_cert do
+    notification(
+        app_icon: "#{APP_ICON_PATH}",
+        title: "根证书配置",
+        subtitle: "#{Time.now}",
+        message: "开始生成根证书"
+    )
+
+    # 生成根证书
+    # cert
+    get_certificates(
+        output_path: ENV['PACKAGE_OUTPUT_DIR'],
+        development: false,  # 是否生成developmenet对应的cer文件
+        force: false, # 是否强制生成
+    )
+
+    notification(
+        app_icon: "#{APP_ICON_PATH}",
+        title: "推送证书配置",
+        subtitle: "#{Time.now}",
+        message: "开始生成推送证书"
+    )
+
+    # 确保最新的推送通知证书在提交过程中有效
+    # pem
+    get_push_certificate(
+        output_path: ENV['PACKAGE_OUTPUT_DIR'],
+        development: false, # 是否生成developmenet对应的cer文件
+        generate_p12: true, # 生成p12文件
+        active_days_limit: 30, # 证书有效期小于30天时 重新创建并覆盖
+        force: false, # 强制生成, 若此值为true, 会忽略limit_day参数, 创建覆盖
+        p12_password: "#{P_12_PASSWORD}" #生成p12文件的密码
+    )
+
+    notification(
+        sound: "Glass",
+        app_icon: "#{APP_ICON_PATH}",
+        title: "证书配置",
+        subtitle: "#{Time.now}",
+        message: "相关证书配置完成"
+    )
+end
+
+
+# 8
+desc "generate provisioning profile"
+lane :generate_pp_file do
+    notification(
+        app_icon: "#{APP_ICON_PATH}",
+        title: "描述文件配置",
+        subtitle: "#{Time.now}",
+        message: "开始生成描述文件"
+    )
+
+    # sigh
+    get_provisioning_profile(
+        output_path: ENV['PACKAGE_OUTPUT_DIR'],
+        skip_install: false, # 是否跳过本地provisioning profile安装
+        app_identifier: $PRO_BUNDLE_IDEN
+        # development: true # 是否生成developmenet对应的pp文件
+    )
+
+    # match 同步操作
+    # sync_code_signing(
+    #     type: "appstore", # default is development
+    #     git_url: "http://gitlab.xingmentech.com/lee/certificates",
+    #     force: false,  # 若为true 每次运行此action 会强制生成provisioning profile文件
+    #     force_for_new_devices: true # 若type为development时 测试设备变更 重新生成对应的新的pp文件
+    # )
+
+    # notification(
+    #     app_icon: "#{APP_ICON_PATH}",
+    #     title: "同步完成",
+    #     subtitle: "#{Time.now}",
+    #     message: "证书和描述文件 Git托管完成"
+    # )
+
+    notification(
+        app_icon: "#{APP_ICON_PATH}",
+        title: "开始更新Xcode配置",
+        subtitle: "#{Time.now}",
+        message: "匹配两种模式下对应的Code sign配置"
+    )
+
+    # 更新项目的code signing设置
+    puts ENV['PACKAGE_OUTPUT_DIR']+"/AppStore_"+$PRO_BUNDLE_IDEN+".mobileprovision"
+    update_project_provisioning(
+        xcodeproj: ENV['PRO_SCHEME']+".xcodeproj",
+        profile: ENV['PACKAGE_OUTPUT_DIR']+"/AppStore_"+$PRO_BUNDLE_IDEN+".mobileprovision",  # 描述文件路径，必须包含文件类型后缀. mobileprovision
+        # build_configuration: "Release",  # 过滤build configuration项，如果不指定该参数，则表示同时作用于所有Release和Debug模式
+    )
+
+    automatic_code_signing(
+        path: ENV['PRO_SCHEME']+".xcodeproj",
+        use_automatic_signing: false,
+        team_id: $TEAM_ID,
+        profile_name: $PRO_BUNDLE_IDEN+" AppStore",  # 描述文件名称
+        code_sign_identity: "iPhone Distribution"
+    )
+
+    notification(
+        sound: "Glass",
+        app_icon: "#{APP_ICON_PATH}",
+        title: "更新Xcode配置成功",
+        subtitle: "#{Time.now}",
+        message: "可以打开项目查看"
+    )
+end
+
+
+# 9
+desc "生成屏幕截图"
+lane :auto_generate_snapshoots_without_frame do
+    generate_snip_files(
+        is_frame_it: false
+    )
+end 
+
+
+# 10
+desc "生成带文案和外框的截图"
+lane :auto_generate_snapshoots_with_frame do
+    generate_snip_files(
+        is_frame_it: true
+    )
+end 
+
+
+# 11
+desc "frame and slogan"
+lane :add_frame_and_slogan do
+    notification(
+        app_icon: "#{APP_ICON_PATH}",
+        title: "屏幕截图外框和文案",
+        subtitle: "#{Time.now}",
+        message: "开始添加外框和文案"
+    )
+
+    # frameit
+    frame_screenshots(
+        # 白色外框 (以下四个属性可以选择性地打开一个)
+        # white: true,
+        # 银色边框
+        silver: true,
+        # 玫瑰金边框
+        # rose_gold: true,
+        # 金色边框
+        # gold: true,
+        # 产生屏幕截图在哪个路径目录
+        path: ENV['SCREENSHOTS_OUTPUT_DIR'],
+        resume: true,
+        force_orientation_block: proc do |filename|
+            f = filename.downcase
+            if f.include?("#{LANCSCAPE_LEFT_SYMBOL_INFO}")
+                :landscape_left
+            elsif f.include?("#{LANCSCAPE_RIGHT_SYMBOL_INFO}")
+                :landscape_right
+            else
+                :portrait
+            end
+        end
+    )
+
+    notification(
+        sound: "Glass",
+        app_icon: "#{APP_ICON_PATH}",
+        title: "屏幕截图外框和文案添加完成",
+        subtitle: "#{Time.now}",
+        message: "如果需要构建版本, 请执行sh fastlane onlyBuildApp"
+    )
+end
+
+
+# 12
+desc "check app store metadata"
+lane :check_metadata do
+    # 预检测 precheck 此处预检测可能会出现问题 但是不影响metadata上传 上传时可注释掉此部分
+    notification(
+        app_icon: "#{APP_ICON_PATH}",
+        title: "提审预检",
+        subtitle: "#{Time.now}",
+        message: "开始检测"
+    )
+
+    check_app_store_metadata(
+        include_in_app_purchases: false,
+    )
+
+    notification(
+        app_icon: "#{APP_ICON_PATH}",
+        title: "提审预检",
+        subtitle: "#{Time.now}",
+        message: "检测完成"
+    )
+end
+
+
+# 13
+desc "手动构建版本"
+lane :mutual_build_app do
+    package_application(
+        auto_increment: false
+    )
+end 
+
+
+# 14
+desc "只上传元数据"
+lane :only_upload_metadata_to_review do
+    upload_to_itunes_review(
+        upload_type: "metadata"
+    )
+end 
+
+
+# 15
+desc "只上传二进制"
+lane :only_upload_binary_to_review do
+    upload_to_itunes_review(
+        upload_type: "ipa"
+    )
+end 
+
+
+# 16
+desc "只上传屏幕截图"
+lane :only_upload_screenshots_to_review do
+    upload_to_itunes_review(
+        upload_type: "snip_files"
+    )
+end 
+
+
+# 17
+desc "上传已有文件提审(不创建证书、描述文件、截图、构建版本, 自动发布)"
+lane :upload_existing_files_to_review do
+    puts "\033[32m请选择发布方式\033[0m \033[33m\n1:  自动发布\n2:  手动发布\n\033[0m\033[32m其他输入会结束操作, 直接回车会自动发布\033[0m"
+    release_mode = STDIN.gets.chomp
+    release_mode_i = release_mode.to_i
+    if (release_mode_i>2 || release_mode_i<1) && !release_mode.empty?
+        UI.user_error!("操作取消")
+    end
+
+    if release_mode == '1' || release_mode == ''
+        puts "\033[32m选择了自动发布\033[0m"
+        is_auto_mode = true
+    elsif release_mode == '2'
+        puts "\033[32m选择了手动发布\033[0m"
+        is_auto_mode = false
+    else
+        UI.user_error!("操作取消")
+    end
+
+    upload_to_itunes_review(
+        upload_type: "all",
+        is_auto_mode: is_auto_mode,
+        is_over_write: true
+    )
+end 
+
+
+# 18
+desc "不做其他附加操作, 只提审"
+lane :only_submit_to_review do
+    puts "\033[32m请选择发布方式\033[0m \033[33m\n1:  自动发布\n2:  手动发布\n\033[0m\033[32m其他输入会结束操作, 直接回车会自动发布\033[0m"
+    release_mode = STDIN.gets.chomp
+    release_mode_i = release_mode.to_i
+    if (release_mode_i>2 || release_mode_i<1) && !release_mode.empty?
+        UI.user_error!("操作取消")
+    end
+
+    if release_mode == '1' || release_mode == ''
+        puts "\033[32m选择了自动发布\033[0m"
+        is_auto_mode = true
+    elsif release_mode == '2'
+        puts "\033[32m选择了手动发布\033[0m"
+        is_auto_mode = false
+    else
+        UI.user_error!("操作取消")
+    end
+
+    notification(
+        app_icon: "#{APP_ICON_PATH}",
+        title: "提审操作",
+        subtitle: "#{Time.now}",
+        message: ENV['PRO_SCHEME']+"开始提审操作"
+    )
+
+    upload_to_app_store(
+        platform: "ios",
+        force: true, #跳过HTMI报告验证上传
+        skip_metadata: true,
+        skip_binary_upload: true,
+        skip_screenshots: true,
+        precheck_include_in_app_purchases: false, # 预检测
+        run_precheck_before_submit: false,
+        submit_for_review: true,
+        automatic_release: is_auto_mode
+    )
+
+    notification(
+        app_icon: "#{APP_ICON_PATH}",
+        title: "提审操作",
+        subtitle: "#{Time.now}",
+        message: ENV['PRO_SCHEME']+"提审完成"
+    )
+end
+
+
+desc "新创建一个app"
+lane :create_app do
+    puts "\033[32m========开始创建应用========\033[0m\n"
+    # puts "\033[32m请输入开发者账号, 两次未输入将取消操作\033[0m"
+    # account = STDIN.gets.chomp
+    # if account.empty?
+    #     puts "\033[33m未输入任何字符, 请输入开发者账号(第二次)\033[0m"
+    #     account = STDIN.gets.chomp
+    #     if account.empty?
+    #         UI.user_error!("连续两次未输入应用名称, 操作取消")
+    #     end
+    # end
+
+    puts "\033[32m请输入应用名称, 两次未输入将取消操作\033[0m"
+    app_name = STDIN.gets.chomp
+    if app_name.empty?
+        puts "\033[33m未输入任何字符, 请输入应用名称(第二次)\033[0m"
+        app_name = STDIN.gets.chomp
+        if app_name.empty?
+            UI.user_error!("连续两次未输入应用名称, 操作取消")
+        end
+    end
+
+    puts "\033[33m选择应用主语言\033[0m \033[32m\n1: 英语(English(美国))\n2: 英语(English(澳大利亚))\n3: 英语(English(加拿大))\n4: 英语(English(英国))\n5: 简体中文\n6: 繁体中文\n7: 日语\n8: 韩语\n9: 意大利\n10: 德语\n11: 法语\n\033[33m其他输入会结束创建, 直接回车表示使用英语(English(美国))\033[0m"
+    main_lan = STDIN.gets.chomp
+    main_lan_i = main_lan.to_i
+    if (main_lan_i<1 || main_lan_i>11) && !main_lan.empty?
+        UI.user_error!("未找到符合操作, 操作取消")
+    end
+
+    puts main_lan
+    if main_lan != '-1'
+        case main_lan
+        when '1',''
+            lan = "English"
+
+        when '2'
+            lan = "English_Australian"
+
+        when '3'
+            lan = "English_CA"
+
+        when '4'
+            lan = "English_UK"
+
+        when '5'
+            lan = "Simplified Chinese"
+            $LANGUAGE = "Chinese"
+
+        when '6'
+            lan = "Traditional Chinese"
+            $LANGUAGE = "Traditional"
+
+        when '7'
+            lan = "Japanese"
+            $LANGUAGE = "Japanese"
+
+        when '8'
+            lan = "Korean"
+            $LANGUAGE = "Korean"
+
+        when '9'
+            lan = "Italian"
+            $LANGUAGE = "Italian"
+
+        when '10'
+            lan = "German"
+            $LANGUAGE = "German"
+
+        when '11'
+            lan = "French"
+            $LANGUAGE = "French"
+
+        else 
+            UI.user_error!("未找到选项")
+        end
+    end
+
+    # proj_bundle_iden = get_product_bundle_id(project_filepath: ENV['PRO_SCHEME']+".xcodeproj", scheme: ENV['PRO_SCHEME'])
+    # File.write(ENV['APPFILE_PATH'], "app_identifier(\"#{proj_bundle_iden}\")\napple_id(\"#{account}\")")
+​    produce(
+        username: $ACCOUNT_IDEN,
+        app_identifier: $PRO_BUNDLE_IDEN,
+        app_name: app_name,
+        language: lan,
+        app_version: '1.0',
+        platform: 'ios',
+        sku: $PRO_BUNDLE_IDEN,
+        # skip_itc: true,
+        # Optional
+        # App services can be enabled during app creation
+        enable_services: {
+            # access_wifi: "on",             # "on", "off"
+            # app_group: "on",               # "on", "off"
+            # apple_pay: "on",               # "on", "off"
+            associated_domains: "on",        # "on", "off"
+            # auto_fill_credential: "on",    # "on", "off"
+            # data_protection: "complete",   # "complete", "unlessopen", "untilfirstauth",
+            # game_center: "on",             # "on", "off"
+            # health_kit: "on",              # "on", "off"
+            # home_kit: "on",                # "on", "off"
+            # hotspot: "on",                 # "on", "off"
+            # icloud: "cloudkit",            # "legacy", "cloudkit"
+            # in_app_purchase: "on",         # "on", "off"
+            # inter_app_audio: "on",         # "on", "off"
+            # passbook: "on",                # "on", "off"
+            # multipath: "on",               # "on", "off"
+            # network_extension: "on",       # "on", "off"
+            # nfc_tag_reading: "on",         # "on", "off"
+            # personal_vpn: "on",            # "on", "off"
+            # passbook: "on",                # "on", "off" (deprecated)
+            # siri_kit: "on",                # "on", "off"
+            # vpn_configuration: "on",       # "on", "off" (deprecated)
+            # wallet: "on",                  # "on", "off"
+            # wireless_accessory: "on",      # "on", "off"
+            push_notification: "on",         # "on", "off"
+        }
+    )
+    notification(
+        sound: "Glass",
+        app_icon: "#{APP_ICON_PATH}",
+        title: "应用创建成功",
+        subtitle: "#{Time.now}",
+        message: "点击可以跳转打开ITC查看",
+        open: "https://itunesconnect.apple.com"
+    )
+end
+
+
+# 生成屏幕截图
+desc "take snapshot"
+lane :generate_snip_files do |option|
+    notification(
+        app_icon: "#{APP_ICON_PATH}",
+        title: "屏幕截图相关",
+        subtitle: "#{Time.now}",
+        message: "开始生成屏幕截图"
+    )
+
+    # 获取最新的屏幕截图
+    # snapshot capture_screenshots
+    capture_ios_screenshots(
+        skip_open_summary: true,
+        localize_simulator: true,
+        erase_simulator: false,
+        reinstall_app: false,
+        dark_mode: false,
+        clean: false,
+        concurrent_simulators: true,
+        number_of_retries: "3",
+        clear_previous_screenshots: false,
+        configuration: "Release",
+        output_directory: ENV['SCREENSHOTS_OUTPUT_DIR']
+    )
+
+    notification(
+        sound: "Glass",
+        app_icon: "#{APP_ICON_PATH}",
+        title: "屏幕截图相关",
+        subtitle: "#{Time.now}",
+        message: "屏幕截图完成"
+    )
+
+    is_add_frame = option[:is_frame_it]
+    if is_add_frame
+        add_frame_and_slogan
+    end
+end
+
+
+desc "开始自动构建版本"
+lane :package_application do |option|
+    puts "\033[32m开始调整Plist文件内容和Package方式\033[0m"
+    set_info_plist_value(
+        path: ENV['INFO_PLIST_PATH'],
+        key: "CFBundlePackageType",
+        value: "APPL"
+    )
+
+    camera_info = get_info_plist_value(path: ENV['INFO_PLIST_PATH'], key: "NSCameraUsageDescription")
+    if camera_info.nil?
+        case $LANGUAGE
+        when 'English'
+            camera_auth_info = "App needs your authorization to take pictures with your camera for avatar settings."
+
+        when 'Chinese'
+            camera_auth_info = "应用需要您的授权才能使用相机拍照以便进行头像设置."
+
+        when 'Traditional'
+            camera_auth_info = "應用需要您的授權才能使用相機拍照以便進行頭像設置."
+
+        when 'Japanese'
+            camera_auth_info = "申込みアバター設定のためにカメラで写真を撮るには許可が必要です."
+
+        when 'Korean'
+            camera_auth_info = "신청 아바타 설정을 위해 카메라로 사진을 찍으려면 승인이 필요합니다."
+
+        when 'Italian'
+            camera_auth_info = "Applicazioni richiede l'autorizzazione per scattare foto con la fotocamera per le impostazioni dell'avatar."
+
+        when 'German'
+            camera_auth_info = "Anwendung erfordert Ihre Berechtigung zum Aufnehmen von Bildern mit Ihrer Kamera für Avatar-Einstellungen."
+
+        when 'French'
+            camera_auth_info = "Candidature nécessite votre autorisation pour prendre des photos avec votre appareil photo pour les paramètres d'avatar."
+
+        else 
+            camera_auth_info = "App needs your authorization to take pictures with your camera for avatar settings."
+        end
+
+        update_plist(
+            plist_path: ENV['INFO_PLIST_PATH'],
+            block: proc do |plist|
+                plist[:NSCameraUsageDescription] = camera_auth_info
+            end
+        )
+        puts "\033[32mInfo.plist内新增摄像头授权信息\033[0m"
+    end
+
+    photo_add_info = get_info_plist_value(path: ENV['INFO_PLIST_PATH'], key: "NSPhotoLibraryAddUsageDescription")
+    if photo_add_info.nil?
+        case $LANGUAGE
+        when 'English'
+            photo_add_auth_info = "App needs your authorization to access the album to get pictures for avatar settings."
+
+        when 'Chinese'
+            photo_add_auth_info = "应用需要您的授权才能访问相册获取图片以便进行头像设置."
+
+        when 'Traditional'
+            photo_add_auth_info = "應用需要您的授權才能訪問相冊獲取圖片以便進行頭像設置."
+
+        when 'Japanese'
+            photo_add_auth_info = "申込みアバター設定の写真を取得するには、アルバムにアクセスするための承認が必要です."
+
+        when 'Korean'
+            photo_add_auth_info = "신청 아바타 설정 용 사진을 얻으려면 앨범에 액세스 할 수있는 권한이 필요합니다.."
+
+        when 'Italian'
+            photo_add_auth_info = "Applicazioni richiede l'autorizzazione per accedere all'album per ottenere immagini per le impostazioni dell'avatar."
+
+        when 'German'
+            photo_add_auth_info = "Anwendung benötigen Sie Ihre Berechtigung, um auf das Album zuzugreifen und Bilder für Avatar-Einstellungen zu erhalten."
+
+        when 'French'
+            photo_add_auth_info = "Candidature besoin de votre autorisation pour accéder à l'album pour obtenir des photos des paramètres d'avatar."
+
+        else 
+            photo_add_auth_info = "App needs your authorization to access the album to get pictures for avatar settings."
+        end
+
+        update_plist(
+            plist_path: ENV['INFO_PLIST_PATH'],
+            block: proc do |plist|
+                plist[:NSPhotoLibraryAddUsageDescription] = photo_add_auth_info
+            end
+        )
+        puts "\033[32mInfo.plist内新增相册访问授权信息(NSPhotoLibraryAddUsageDescription)\033[0m"
+    end
+
+    photo_info = get_info_plist_value(path: ENV['INFO_PLIST_PATH'], key: "NSPhotoLibraryUsageDescription")
+    if photo_info.nil?
+        case $LANGUAGE
+        when 'English'
+            photo_auth_info = "App needs your authorization to access the album to get pictures for avatar settings."
+
+        when 'Chinese'
+            photo_auth_info = "应用需要您的授权才能访问相册获取图片以便进行头像设置."
+
+        when 'Traditional'
+            photo_auth_info = "應用需要您的授權才能訪問相冊獲取圖片以便進行頭像設置."
+
+        when 'Japanese'
+            photo_auth_info = "申込みアバター設定の写真を取得するには、アルバムにアクセスするための承認が必要です."
+
+        when 'Korean'
+            photo_auth_info = "신청 아바타 설정 용 사진을 얻으려면 앨범에 액세스 할 수있는 권한이 필요합니다.."
+
+        when 'Italian'
+            photo_auth_info = "Applicazioni richiede l'autorizzazione per accedere all'album per ottenere immagini per le impostazioni dell'avatar."
+
+        when 'German'
+            photo_auth_info = "Anwendung benötigen Sie Ihre Berechtigung, um auf das Album zuzugreifen und Bilder für Avatar-Einstellungen zu erhalten."
+
+        when 'French'
+            photo_auth_info = "Candidature besoin de votre autorisation pour accéder à l'album pour obtenir des photos des paramètres d'avatar."
+
+        else 
+            photo_auth_info = "App needs your authorization to access the album to get pictures for avatar settings."
+        end
+
+        update_plist(
+            plist_path: ENV['INFO_PLIST_PATH'],
+            block: proc do |plist|
+                plist[:NSPhotoLibraryUsageDescription] = photo_auth_info
+            end
+        )
+        puts "\033[32mInfo.plist内新增相册访问授权信息(NSPhotoLibraryUsageDescription)\033[0m"
+    end
+
+    location_info = get_info_plist_value(path: ENV['INFO_PLIST_PATH'], key: "NSLocationWhenInUseUsageDescription")
+    if location_info.nil?
+        case $LANGUAGE
+        when 'English'
+            location_auth_info = "App need your authorization to get your geographic location to provide you with data about the surrounding services."
+
+        when 'Chinese'
+            location_auth_info = "应用需要通过您的授权以获取您的地理位置为您提供周围的服务相关数据."
+
+        when 'Traditional'
+            location_auth_info = "應用需要通過您的授權以獲取您的地理位置為您提供周圍的服務相關數據."
+
+        when 'Japanese'
+            location_auth_info = "申込み周辺のサービスに関するデータを提供するために、地理的な場所を取得するには承認が必要です."
+
+        when 'Korean'
+            location_auth_info = "신청 주변 서비스에 대한 데이터를 제공하기 위해 지리적 위치를 확보하려면 승인이 필요합니다."
+
+        when 'Italian'
+            location_auth_info = "Applicazioni richiede l'autorizzazione per ottenere la posizione geografica per fornire dati sui servizi circostanti."
+
+        when 'German'
+            location_auth_info = "Anwendung benötigen Sie Ihre Genehmigung, um Ihren geografischen Standort zu erhalten und Ihnen Daten über die umliegenden Dienste bereitzustellen."
+
+        when 'French'
+            location_auth_info = "Candidature besoin de votre autorisation pour obtenir votre position géographique afin de vous fournir des données sur les services environnants."
+
+        else 
+            location_auth_info = "App need your authorization to get your geographic location to provide you with data about the surrounding services."
+        end
+
+        update_plist(
+            plist_path: ENV['INFO_PLIST_PATH'],
+            block: proc do |plist|
+                plist[:NSLocationWhenInUseUsageDescription] = location_auth_info
+            end
+        )
+        puts "\033[32mInfo.plist内新增地理位置访问授权信息\033[0m"
+    end
+
+    micro_info = get_info_plist_value(path: ENV['INFO_PLIST_PATH'], key: "NSMicrophoneUsageDescription")
+    if micro_info.nil?
+        case $LANGUAGE
+        when 'English'
+            micro_auth_info = "App needs your authorization to use your microphone permissions."
+
+        when 'Chinese'
+            micro_auth_info = "应用需要您的授权才能使用您的麦克风权限."
+
+        when 'Traditional'
+            micro_auth_info = "應用需要您的授權才能使用您的麥克風權限."
+
+        when 'Japanese'
+            micro_auth_info = "申込みマイクの権限を使用するには承認が必要です."
+
+        when 'Korean'
+            micro_auth_info = "신청 마이크 권한을 사용하려면 승인이 필요합니다."
+
+        when 'Italian'
+            micro_auth_info = "Applicazioni richiede l'autorizzazione per utilizzare le autorizzazioni del microfono."
+
+        when 'German'
+            micro_auth_info = "Anwendung benötigt Ihre Berechtigung, um Ihre Mikrofonberechtigungen zu verwenden."
+
+        when 'French'
+            micro_auth_info = "Candidature a besoin de votre autorisation pour utiliser les autorisations de votre microphone."
+
+        else 
+            micro_auth_info = "App needs your authorization to use your microphone permissions."
+            
+        end
+
+        update_plist(
+            plist_path: ENV['INFO_PLIST_PATH'],
+            block: proc do |plist|
+                plist[:NSMicrophoneUsageDescription] = micro_auth_info
+            end
+        )
+        puts "\033[32mInfo.plist内新增麦克风访问授权信息\033[0m"
+    end
+
+    puts "\033[32m调整Info.plist文件内容完成\033[0m"
+    is_auto_increment = option[:auto_increment];
+    if is_auto_increment
+        # 设置build版本, 直接从plist文件中提取
+        increment_build_number(
+            build_number: latest_testflight_build_number(initial_build_number: 0, version: "#{PLIST_VERSION_NUMBER}")+1
+            # build_number: "#{PLIST_BUILD_NUMBER}"
+        )
+
+        # 设置version版本号
+        increment_version_number(
+            version_number: "#{PLIST_VERSION_NUMBER}"
+        )
+
+        notification(
+            app_icon: "#{APP_ICON_PATH}",
+            title: "开始设置构建版本",
+            subtitle: "#{Time.now}",
+            message: "version (#{PLIST_VERSION_NUMBER}), build (#{PLIST_BUILD_NUMBER}+1)"
+        )
+    else
+        puts "\033[32m请确认当前工程的版本号:\033[0m\n(版本号:\033[0m\033[32m#{PLIST_VERSION_NUMBER})\033[0m \033[33m构建版本号:\033[0m\033[32m(#{PLIST_BUILD_NUMBER})\033[0m.\n\033[33m是否调整:\n1: 调整\n2: 取消操作\n其他输入(包括回车)表示不调整\033[0m"
+        adjust_input = STDIN.gets.chomp
+        if adjust_input == '2'
+            UI.user_error!("手动取消操作")
+        else
+            if adjust_input == '1' # 调整
+                puts "\033[32m请输入Version版本, 不要乱输入(两次未输入将取消操作)\033[0m"
+                input_version = STDIN.gets.chomp
+                if input_version.empty?
+                    puts "\033[33m输入为空, 请重新输入Version版本(第二次)\033[0m"
+                    input_version = STDIN.gets.chomp
+                    if input_version.empty?
+                        UI.user_error!("连续两次输入不合法, 操作取消")
+                    end
+                end
+                PLIST_VERSION_NUMBER = input_version
+
+                puts "\033[32m请输入Build版本, 不要乱输入(两次未输入将取消操作)\033[0m"
+                input_build = STDIN.gets.chomp
+                if input_build.empty?
+                    puts "\033[33m输入为空, 请重新输入Build版本(第二次)\033[0m"
+                    input_build = STDIN.gets.chomp
+                    if input_build.empty?
+                        UI.user_error!("连续两次输入不合法, 操作取消")
+                    end
+                end
+                PLIST_BUILD_NUMBER = input_build
+
+                increment_version_number(
+                    version_number: "#{PLIST_VERSION_NUMBER}"
+                )
+
+                increment_build_number(
+                    build_number: "#{PLIST_BUILD_NUMBER}"
+                )
+            end
+
+            notification(
+                app_icon: "#{APP_ICON_PATH}",
+                title: "开始设置构建版本",
+                subtitle: "#{Time.now}",
+                message: "version (#{PLIST_VERSION_NUMBER}), build (#{PLIST_BUILD_NUMBER})"
+            )
+        end
+    end
+
+    # 构建版本 gym
+    pro_extention = ENV['PRO_EXTENTION']
+    if pro_extention.include?("xcworkspace")
+        build_app(
+            scheme: ENV['PRO_SCHEME'],
+            workspace: ENV['PRO_SCHEME']+".xcworkspace", # 若使用Cocoaspod管理三方库 打开左侧注释代码 并替换键入工程名称
+            skip_package_ipa: false, # 跳过打包ipa文件
+            skip_build_archive: false,
+            clean: true,
+            configuration: "Release",
+            silent: false,
+            include_symbols: 'true', # 是否导出符号表
+            include_bitcode: false,
+            export_method:"app-store" # ad-hoc(打包托管版本), enterprise(企业版本) development(开发版本)
+        )
+    else
+        build_app(
+            scheme: ENV['PRO_SCHEME'],
+            project: ENV['PRO_SCHEME']+".xcodeproj", # 未使用Cocoaspod管理三方库方式
+            skip_package_ipa: false, # 跳过打包ipa文件
+            skip_build_archive: false,
+            clean: true,
+            configuration: "Release",
+            silent: false,
+            include_symbols: 'true', # 是否导出符号表
+            include_bitcode: false,
+            export_method:"app-store" # ad-hoc(打包托管版本), enterprise(企业版本) development(开发版本)
+        )
+    end
+
+    notification(
+        sound: "Glass",
+        app_icon: "#{APP_ICON_PATH}",
+        title: "版本构建完成",
+        subtitle: "#{Time.now}",
+        message: "你可以在根目录中查看到"
+    )
+end
+
+
+# 更新操作
+desc "应用版本更新迭代"
+lane :update_release do |option|
+    package_application(
+        auto_increment: true
+    )
+
+    upload_to_itunes_review(
+        upload_type: "all",
+        is_auto_mode: option[:is_auto_mode],
+        is_over_write: option[:is_over_write]
+    )
+end
+
+
+lane :release do |option|
+    auto_cert
+
+    generate_pp_file
+
+    is_frame = option[:frame_and_slogan]
+    generate_snip_files(
+        is_frame_it: is_frame
+    )
+
+    package_application(
+        auto_increment: true
+    )
+
+    upload_to_itunes_review(
+        upload_type: "all",
+        is_auto_mode: option[:is_auto_mode],
+        is_over_write: option[:is_over_write]
+    )
+end
+
+
+desc "上传应用至ITC审核"
+lane :upload_to_itunes_review do |option|
+    upload_type = option[:upload_type]
+    is_auto_mode = option[:is_auto_mode]
+    is_over_write = option[:is_over_write]
+    puts "\033[32m上传方式: #{upload_type}\033[0m"
+    puts "\033[32m是否覆盖: #{is_over_write}\033[0m"
+    puts "\033[32m是否自动发布: #{is_auto_mode}\033[0m"
+
+    # 若为定版包-注意将自动发布改为手动发布 automatic_release => false
+    # deliver appstore
+    if upload_type.include?("metadata")
+        notification(
+            app_icon: "#{APP_ICON_PATH}",
+            title: "元数据上传",
+            subtitle: "#{Time.now}",
+            message: ENV['PRO_SCHEME']+" 开始上传"
+        )
+
+        upload_to_app_store(
+            platform: "ios",
+            force: true, #跳过HTMI报告验证上传
+            skip_metadata: false,
+            skip_binary_upload: true,
+            skip_screenshots: true,
+            precheck_include_in_app_purchases: false, # 预检测
+            run_precheck_before_submit: false,
+        )
+    elsif upload_type.include?("ipa")
+        notification(
+            app_icon: "#{APP_ICON_PATH}",
+            title: "二进制上传",
+            subtitle: "#{Time.now}",
+            message: ENV['PRO_SCHEME']+" 开始上传"
+        )
+
+        upload_to_app_store(
+            platform: "ios",
+            force: true, #跳过HTMI报告验证上传
+            skip_metadata: true,
+            skip_binary_upload: false,
+            skip_screenshots: true,
+            precheck_include_in_app_purchases: false, # 预检测
+            run_precheck_before_submit: false,
+        )
+    elsif upload_type.include?("snip_files")
+        notification(
+            app_icon: "#{APP_ICON_PATH}",
+            title: "展示图上传",
+            subtitle: "#{Time.now}",
+            message: ENV['PRO_SCHEME']+" 开始上传"
+        )
+
+        upload_to_app_store(
+            platform: "ios",
+            force: true, #跳过HTMI报告验证上传
+            skip_metadata: true,
+            skip_binary_upload: true,
+            skip_screenshots: false,
+            overwrite_screenshots: true,
+            precheck_include_in_app_purchases: false, # 预检测
+            run_precheck_before_submit: false,
+        )
+    elsif upload_type.include?("all")
+        notification(
+            app_icon: "#{APP_ICON_PATH}",
+            title: "所有元素上传",
+            subtitle: "#{Time.now}",
+            message: ENV['PRO_SCHEME']+" 开始上传"
+        )
+
+        upload_to_app_store(
+            platform: "ios",
+            # metadata_path: "./fastlane/metadata", # 若更改了元数据文件路径, 需在此处重新指向
+            # screenshots_path: ENV['SCREENSHOTS_OUTPUT_DIR'], # 若更改屏幕截图路径, 需在此处重新指向
+            # edit_live: false, # 修改实时元数据, 此参数若设置为true 会阻止ipa和screenshots文件上传
+            # use_live_version: false, #强制使用实时版本, 不编辑版本信息
+            force: true, #跳过HTMI报告验证上传
+            skip_metadata: false,
+            skip_binary_upload: false,
+            skip_screenshots: false,
+            overwrite_screenshots: is_over_write,
+            submit_for_review: true,
+            automatic_release: is_auto_mode,
+            # reset_ratings: false, # 发布新版本时重置评分
+            # auto_release_date: 1000*60*60*24*7, # 自动发布日期设定 不可同时和automatic_release一起使用
+            precheck_include_in_app_purchases: false, # 预检测
+            run_precheck_before_submit: false,
+        )
+    end
+
+    notification(
+        app_icon: "#{APP_ICON_PATH}",
+        sound: "Glass",
+        title: "恭喜! ",
+        subtitle: "#{Time.now}",
+        message: "上传成功! 点击打开iTC",
+        open: "https://itunesconnect.apple.com"
+    )
+end
+
+
+desc "以上lane操作全部完成时执行"
+after_all do |lane|
+    # slack 协同部分
+    # slack(message: "构建版本上传成功")
+end
+
+
+desc "执行错误"
+error do  |lan, exception|
+    puts "\033[5m执行错误, 还原构建版本号\033[0m"
+    puts "\033[32m运行下面的命令可以查看错误信息\nsudo find /private/var -name \"*.xcdistributionlogs\"\033[0m"
+    increment_build_number(
+        build_number: PLIST_BUILD_NUMBER.to_i
+    )
+    notification(
+        sound: "Basso",
+        app_icon: "#{APP_ICON_PATH}",
+        title: "执行错误",
+        subtitle: "#{Time.now}",
+        message: exception.message
+    )
+end
+
+end

@@ -1,0 +1,77 @@
+# 生成屏幕截图的设备类型
+# 此处不做修正 只生成两种最大规格的屏幕截图
+devices([
+    # "iPhone 5",
+    # "iPhone 6",
+    # "iPhone 6 Plus",
+    # "iPhone 7",
+    # "iPhone 7 Plus",
+    # "iPhone 8",
+    "iPhone 8 Plus",
+    # "iPhone SE",
+    # "iPhone X",
+    "iPhone Xs Max"
+    # "iPhone 11"
+    # "iPhone 11 Pro"
+    # "iPhone 11 Pro Max"
+    # "iPad Pro (12.9-inch)",
+    # "iPad Pro (9.7-inch)",
+])
+
+# 此处如果做了本地化处理 把本地化地区缩写键入 会自动本地化 如果未做本地化处理 只保留English即可(节省时间成本 转化效率)
+languages([
+    "zh-Hans",      # Chinese(Simplified)
+    # "zh-Hant",    # 繁体中文
+    # "ja",         # Japanese(日语)
+    # "ko",         # Korean(韩语)
+    # "tr",         # Turkish(土耳其)
+    # "ar-SA",      # Arabic(阿拉伯)
+    # "vi",         # Vietnamese(越南)
+    # "ms",         # Malay(马来文)
+    # "th",         # Thai(泰国)
+    # "hi",         # Hindi(印地语)
+    # "id",         # Indonesian(印度尼西亚)
+    # "en-US",      # English(美国)
+    # "en-AU",      # English(Australia)(英语-澳大利亚)
+    # "en-CA",      # English(Canada)(英语-加拿大)
+    # "fr-CA",      # French(Canada)(法语-加拿大)
+    # "es-MX",      # Spanish(Mexico) (西班牙-墨西哥)
+    # "en-GB",      # English(U.K.)(英语-英国)
+    # "nl-NL",      # Dutch(荷兰)
+    # "fr-FR",      # French(法语)
+    # "pl",         # Polish(波兰)
+    # "cs",         # Czech(捷克文)
+    # "sk",         # Slovak(斯洛伐克)
+    # "de-DE",      # German(德语)
+    # "hu",         # Hungarian(匈牙利)
+    # "ru",         # Russian(俄语)
+    # "uk",         # Ukrainian(乌克兰)
+    # "fi",         # Finnish(芬兰)
+    # "sv",         # Swedish(瑞典)
+    # "no",         # Norwegian(挪威)
+    # "da",         # Danish(丹麦)
+    # "it",         # Italian(意大利)
+    # "pt-BR",      # Portuguese(Brazil)(葡萄牙-巴西)
+    # "pt-PT",      # Portuguese(Portugal)(葡萄牙)
+    # "es-ES",      # Spanish(Spain)(西班牙)
+    # "el",         # Greek(希腊语)
+    # "ca",         # Catalan(加泰罗尼亚语)
+    # "hr",         # Croatian(克罗地亚语)
+    # "ro",         # Romanian(罗马尼亚)
+    # "he"          # Hebrew(希伯来语)
+])
+
+# 此处键入UI Tests scheme的名字 ("ButterflyAnimatedUITests" => "xxx(此为你测试工程UITest Target名称)")
+scheme(ENV['PRO_SCHEME']+"UITests")
+
+# 生成的屏幕截图存储位置
+output_directory(ENV['SCREENSHOTS_OUTPUT_DIR'])
+
+# 生成新的屏幕截照 清除前一次保留
+clear_previous_screenshots(false)
+
+# 此处的参数可看成临时往NSUserDefault单例对象中塞了一对键值对("favColor"是键 "red"对应的favColor的值) 具体可参照:https://docs.fastlane.tools/actions/snapshot/#launch-arguments
+launch_arguments(["-favColor red", "-FASTLANE_SNAPSHOT_ENABLED YES"])
+
+# For more information about all available options run
+# fastlane action snapshot
