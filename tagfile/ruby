@@ -54,14 +54,13 @@ dmFile = "./fastlane/metadata"
 
 def trans(path,tagLanguage,tagTxt)
     cntent = `trans :#{tagLanguage} file://fastlane/metadata/default/#{tagTxt}.txt`
-    puts cntent.length
     if cntent.length < 10
         puts "翻译失败，使用默认值"
         cntent = File.read("fastlane/metadata/default/#{tagTxt}.txt")
     end
     tagPath = path + "/#{tagTxt}.txt"
     File.new(tagPath,"w").syswrite(cntent)
-    puts "-------写入文件完成---------"
+    puts "-------写入#{tagTxt}文件完成---------"
     sleep(3) #频繁操作翻译会限制 ip
 end
 

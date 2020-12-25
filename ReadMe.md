@@ -21,29 +21,29 @@ fastlane deliver download_screenshots
 fastlane deliver download_metadata
 ```
 
+操作 tagfile 文件夹下的文件
 
+1.把 ruby 复制到 项目文件目录 即 xxx.xcodeproj 文件所在目录
 
-把 ruby 复制到 项目文件目录 即 xxx.xcodeproj 文件所在目录
+2.把 Fastfile , Snapfile 复制到 fastlane 文件目录替换掉之前的
 
-把 Fastfile , Snapfile 复制到 fastlane 文件目录替换掉之前的
-
-在 Snapfile 文件中解注释主语言 在 screenshots 文件夹中创建主要代码对应的文件夹
+3.在 Snapfile 文件中解注释主语言 在 screenshots 文件夹中创建主语言代码对应的文件夹
 
 如：Snapfile 主语言为 en-GB,那么 在 screenshots 文件夹中 创建 en-GB的文件
 
-然后把5.5，6.5屏幕截图放到 主语言文件夹中
+然后把5.5，6.5屏幕截图放到 主语言文件夹中 如下图：
 
 ![screenshots](./other/screenshots.png)
 
-然后回到 项目所在 打开 ruby 文件
+4.然后回到 项目所在 打开 ruby 文件
 
-解注释 languages 中 你想添加的多语言 保存退出
+5.解注释 languages 中 你想添加的多语言 保存退出
 
-打开命令行，cd 到ruby 文件所在目录 运行
+6.打开命令行，cd 到ruby 文件所在目录 运行
 
 ```
 chmod 777 ruby
 ./ruby
 ```
 
-等待上传，有问题，看输入提示自行解决。
+等待翻译上传，有问题，看输入提示自行解决。
