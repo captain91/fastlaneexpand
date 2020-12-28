@@ -39,7 +39,7 @@ platform :ios do
   exec "fastlane deliver download_metadata"
   end
 
-  desc "只上传截图"
+  desc "上传截图和元数据"
   lane :upload_shots_metadata do 
   	upload_to_app_store(
   		platform: "ios",
