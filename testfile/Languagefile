@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/bin/bash
 #解注释需要添加的语言，建议 20个以上
 languages([
     "zh-Hans",      # Chinese(Simplified)

@@ -54,6 +54,22 @@ end
 if !File.zero?("release_notes.txt")
     puts "kkkk"
 end
+puts "\033[33m------请选择要翻译的内容------\033[0m\n"
+puts "\033[33m 1.描述 \033[0m\n"
+puts "\033[33m 2.更新说明 \033[0m\n"
+puts "\033[33m 3.描述和更新说明 \033[0m\n"
+puts "\033[33m请输入对应数字并回车------\033[0m\n"
+
+def getInput
+    return gets.chomp.to_i
+end
+y = getInput
+
+if !([1,2,3].include? y)
+    puts "\033[41m 请输入对应数字 \033[0m"
+else
+    puts "开始翻译"
+end
 
 # FileUtils.cp_r "dd","ff"
 

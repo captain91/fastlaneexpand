@@ -50,7 +50,7 @@ def trans(path,tagLanguage,tagTxt,mainLanguage)
     # sleep(3) #频繁操作翻译会限制 ip
 end
 
-def copyImage (languagesArr,mainLanguage,dsFile,dmFile)
+def copyImage (languagesArr,mainLanguage,dsFile,dmFile,trType)
     for i in languagesArr do
         next if i == mainLanguage
         #创建元数据文件夹，并复制主数据文件内容
@@ -63,14 +63,26 @@ def copyImage (languagesArr,mainLanguage,dsFile,dmFile)
 
         #开始翻译到新建文件
         puts "------正在翻译内容-----"
-        tagLanguage = i[0,2] #翻译对应的语言
         tagDescription = "description"
         tagRelease_notes = "release_notes"
+        tagLanguage = i[0,2] #翻译对应的语言
         puts "目标语言代码#{tagLanguage}"
-        trans df,tagLanguage,tagDescription,mainLanguage
-        #更新记录不为空就翻译
-        if !File.zero?("fastlane/metadata/#{mainLanguage}/#{tagRelease_notes}.txt")
-            trans df,tagLanguage,tagRelease_notes,mainLanguage
+        #只翻译描述
+        if trType == 1 
+            trans df,tagLanguage,tagDescription,mainLanguage
+        elsif trType == 2
+            #更新记录不为空就翻译
+            if !File.zero?("fastlane/metadata/#{mainLanguage}/#{tagRelease_notes}.txt")
+                trans df,tagLanguage,tagRelease_notes,mainLanguage
+            else
+                puts "\033[31m-----#{tagRelease_notes}.txt内容为空------\033[0m"
+            end
+        else 
+            #更新记录和描述都翻译
+            trans df,tagLanguage,tagDescription,mainLanguage
+            if !File.zero?("fastlane/metadata/#{mainLanguage}/#{tagRelease_notes}.txt")
+                trans df,tagLanguage,tagRelease_notes,mainLanguage
+            end
         end
 
         #创建屏幕截图文件夹
@@ -106,7 +118,7 @@ def getMainLanguage
         end
     end
     if mainLanuguages.empty?
-        puts "\033[41m---获取主语言失败,检查 Snapfile 文件内容\033[0m"
+        puts "\033[31m---获取主语言失败,检查 Snapfile 文件内容\033[0m"
         exit #没有主语无法进行
     else
         puts "\033[33m---获取到主语言为#{mainLanuguages}\033[0m"
@@ -119,17 +131,28 @@ mainLanuguagesFilePath = dsFile + mainLanguage
 puts "\033[33m主语言路径 #{mainLanuguagesFilePath}\033[0m"
 
 if !Dir.exists?(mainLanuguagesFilePath)
-    puts "\033[41m---请在#{dsFile}文件夹下创建#{mainLanguage}文件夹---\033[0m"
+    puts "\033[31m---请在#{dsFile}文件夹下创建#{mainLanguage}文件夹---\033[0m"
     return
 end
 if Dir["#{mainLanuguagesFilePath}/*"].empty?
-    puts "\033[41m---请在#{mainLanuguagesFilePath}文件夹下放入屏幕截图---\033[0m"
+    puts "\033[31m---请在#{mainLanuguagesFilePath}文件夹下放入屏幕截图---\033[0m"
     return
 end
 
 puts "\033[33m------添加 #{languages.length} 个多语言------\033[0m\n"
-copyImage languages,mainLanguage,dsFile,dmFile
-puts "\033[32m------操作完成------\033[0m"
+puts "\033[33m------请选择要翻译的内容------\033[0m\n"
+puts "\033[33m 1.描述 \033[0m\n"
+puts "\033[33m 2.更新说明 \033[0m\n"
+puts "\033[33m 3.描述和更新说明 \033[0m\n"
+puts "\033[33m请输入对应数字并回车------\033[0m\n"
+y = gets.chomp.to_i
+if !([1,2,3].include? y)
+    puts "\033[41m 请输入对应数字 \033[0m"
+    exit
+else
+    copyImage languages,mainLanguage,dsFile,dmFile,y
+end
+puts "\033[32m------操作完成;添加 #{languages.length} 个多语言------\033[0m"
 puts "\033[33m 如果需要对多语言做修改，请前去修改\n 输入回车开始上传内容\033[0m\n"
 y = gets.chomp
 exec "fastlane deliver --force"
