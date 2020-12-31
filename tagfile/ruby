@@ -141,26 +141,39 @@ end
 
 puts "\033[33m------添加 #{languages.length} 个多语言------\033[0m\n"
 puts "\033[33m------请选择要翻译的内容------\033[0m\n"
-puts "\033[33m 1.描述 \033[0m\n"
-puts "\033[33m 2.更新说明 \033[0m\n"
-puts "\033[33m 3.描述和更新说明 \033[0m\n"
+puts "\033[33m 1.翻译描述 \033[0m\n"
+puts "\033[33m 2.翻译更新说明 \033[0m\n"
+puts "\033[33m 3.翻译描述和更新说明 \033[0m\n"
+puts "\033[33m 4.只做上传操作 \033[0m\n"
 puts "\033[33m请输入对应数字并回车------\033[0m\n"
 y = gets.chomp.to_i
-if !([1,2,3].include? y)
+if !([1,2,3,4].include? y)
     puts "\033[41m 请输入对应数字 \033[0m"
     exit
-else
+elsif y != 4
     copyImage languages,mainLanguage,dsFile,dmFile,y
+    puts "\033[32m------操作完成;添加 #{languages.length} 个多语言------\033[0m"
+    puts "\033[33m 如果需要对多语言内容做修改，请前去修改\033[0m\n\n"
 end
-puts "\033[32m------操作完成;添加 #{languages.length} 个多语言------\033[0m"
-puts "\033[33m 如果需要对多语言做修改，请前去修改\n 输入回车开始上传内容\033[0m\n"
-y = gets.chomp
-exec "fastlane deliver screenshots --overwrite --force"
 
-
-
-
-
+puts "\033[33m------请选择要要上传的内容------\033[0m\n"
+puts "\033[33m 1.只上传元数据 \033[0m\n"
+puts "\033[33m 2.只上传屏幕截图 \033[0m\n"
+puts "\033[33m 3.上传元数据和屏幕截图 \033[0m\n"
+puts "\033[33m请输入对应数字并回车------\033[0m\n"
+u = gets.chomp.to_i
+if u == 1
+    #只上传元数据
+    exec "fastlane deliver --skip_screenshots true --force"
+elsif u == 2
+    #只上传屏幕截图覆盖
+    exec "fastlane deliver --skip_metadata true screenshots --overwrite --force"
+elsif u == 3
+    #上传元数据和屏幕截图覆盖
+    exec "fastlane deliver screenshots --overwrite --force"
+else
+    puts "\033[41m 请输入对应数字 \033[0m"
+end
 
 
 
